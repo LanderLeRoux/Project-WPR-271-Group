@@ -7,6 +7,32 @@
     <script src="function.js"></script>
 </head>
 <body>
-    <h1>Hello, World!</h1>
+<form id="issueForm">
+  <input type="text" id="summary" placeholder="Issue Summary" required>
+  <textarea id="description" placeholder="Detailed Description" required></textarea>
+
+  <input type="date" id="dateIdentified" required>
+
+  <select id="projectSelect"></select>
+  <select id="personSelect"></select>
+
+  <select id="status">
+    <option value="open">Open</option>
+    <option value="resolved">Resolved</option>
+    <option value="overdue">Overdue</option>
+  </select>
+
+  <select id="priority">
+    <option value="low">Low</option>
+    <option value="medium">Medium</option>
+    <option value="high">High</option>
+  </select>
+
+  <input type="date" id="targetDate">
+  <input type="date" id="resolutionDate">
+  <textarea id="resolutionSummary" placeholder="Resolution Summary"></textarea>
+
+  <button type="submit">Create Issue</button>
+</form>
 </body>
 </html>
