@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BugVault — Issue Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #08021afe;
+    --surface: #111118;
+    --surface2: #18181f;
+    --border: #2a2a35;
+    --accent: #e8ff47;
+    --accent2: #ff4757;
+    --accent3: #47c8ff;
+    --accent4: #c847ff;
+    --text: #f0f0f5;
+    --muted: #666680;
+    --low: #47c8ff;
+    --medium: #e8a847;
+    --high: #ff4757;
+    --open: #e8a847;
+    --resolved: #47d988;
+    --overdue: #ff4757;
+    --radius: 6px;
+    --font-head: 'Syne', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── NOISE OVERLAY ─── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999; opacity: 0.4;
+  }
+
+  /* ─── TOPBAR ─── */
+  #topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,10,15,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 0;
+    padding: 0 24px;
+    height: 56px;
+  }
+
+  .logo {
+    font-family: var(--font-head);
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: -0.5px;
+    margin-right: 32px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .logo-bug {
+    background: var(--accent);
+    color: var(--bg);
+    width: 28px; height: 28px;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+  }
+
+  nav { display: flex; gap: 2px; flex: 1; }
+  nav button {
+    background: none; border: none;
+    color: var(--muted); font-family: var(--font-mono); font-size: 12px;
+    padding: 8px 16px; cursor: pointer; border-radius: var(--radius);
+    transition: all 0.15s; white-space: nowrap;
+  }
+  nav button:hover { color: var(--text); background: var(--surface2); }
+  nav button.active { color: var(--accent); background: rgba(232,255,71,0.07); }
+
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-mono); font-size: 12px;
+    padding: 7px 14px; border-radius: var(--radius);
+    cursor: pointer; border: 1px solid transparent;
+    transition: all 0.15s; text-decoration: none; white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: var(--bg); font-weight: 700; border-color: var(--accent); }
+  .btn-primary:hover { background: #d4eb3a; }
+  .btn-ghost { background: none; color: var(--muted); border-color: var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--text); }
+  .btn-danger { background: rgba(255,71,87,0.1); color: var(--accent2); border-color: rgba(255,71,87,0.3); }
+  .btn-danger:hover { background: rgba(255,71,87,0.2); }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+
+  /* ─── VIEWS ─── */
+  .view { display: none; padding: 28px 24px; max-width: 1400px; margin: 0 auto; animation: fadeIn 0.2s ease; }
+  .view.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ─── PAGE HEADER ─── */
+  .page-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 24px; gap: 16px;
+  }
+  .page-title { font-family: var(--font-head); font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+  .page-sub { color: var(--muted); margin-top: 4px; font-size: 12px; }
+
+  /* ─── KANBAN ─── */
+  .kanban { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .kanban { grid-template-columns: 1fr; } }
+
+  .kanban-col {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .kanban-col-header {
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .col-label {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-head); font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
+  }
+  .col-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot-open { background: var(--open); }
+  .dot-resolved { background: var(--resolved); }
+  .dot-overdue { background: var(--overdue); }
+  .col-count {
+    background: var(--surface2); color: var(--muted);
+    padding: 2px 8px; border-radius: 20px; font-size: 11px;
+  }
+  .kanban-cards { padding: 12px; display: flex; flex-direction: column; gap: 10px; min-height: 80px; }
+
+  /* ─── TICKET CARD ─── */
+  .ticket-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative; overflow: hidden;
+  }
+  .ticket-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  }
+  .ticket-card.priority-low::before { background: var(--low); }
+  .ticket-card.priority-medium::before { background: var(--medium); }
+  .ticket-card.priority-high::before { background: var(--high); }
+  .ticket-card:hover { border-color: rgba(232,255,71,0.3); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+
+  .ticket-id { font-size: 10px; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.5px; }
+  .ticket-summary { font-family: var(--font-head); font-size: 13px; font-weight: 600; line-height: 1.4; margin-bottom: 10px; }
+  .ticket-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+  }
+  .badge-low { background: rgba(71,200,255,0.12); color: var(--low); }
+  .badge-medium { background: rgba(232,168,71,0.12); color: var(--medium); }
+  .badge-high { background: rgba(255,71,87,0.12); color: var(--high); }
+  .badge-project { background: rgba(200,71,255,0.1); color: var(--accent4); }
+  .badge-open { background: rgba(232,168,71,0.12); color: var(--open); }
+  .badge-resolved { background: rgba(71,217,136,0.12); color: var(--resolved); }
+  .badge-overdue { background: rgba(255,71,87,0.12); color: var(--overdue); }
+
+  .ticket-assignee { margin-left: auto; display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 10px; }
+  .avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: var(--text); flex-shrink: 0; }
+
+  /* ─── FILTERS BAR ─── */
+  .filters-bar {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 20px; padding: 12px 16px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  }
+  .filter-label { font-size: 11px; color: var(--muted); margin-right: 4px; }
+  select, input[type="text"], input[type="date"], input[type="email"], textarea {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--font-mono); font-size: 12px;
+    padding: 7px 10px; border-radius: var(--radius); outline: none;
+    transition: border-color 0.15s;
+  }
+  select:focus, input:focus, textarea:focus { border-color: var(--accent); }
+  select option { background: var(--surface2); }
+  .search-input { flex: 1; min-width: 180px; }
+
+  /* ─── TABLE ─── */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: var(--surface); padding: 12px 16px;
+    text-align: left; font-size: 10px; color: var(--muted);
+    letter-spacing: 1px; text-transform: uppercase; font-weight: 700;
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; cursor: pointer; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td { padding: 12px 16px; font-size: 12px; vertical-align: middle; }
+  .td-summary { font-family: var(--font-head); font-weight: 600; font-size: 13px; max-width: 260px; }
+  .td-id { color: var(--muted); font-size: 11px; white-space: nowrap; }
+
+  /* ─── MODAL ─── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75); z-index: 500;
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; width: 100%; max-width: 680px;
+    max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.8);
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+    position: sticky; top: 0; background: var(--surface); z-index: 2;
+  }
+  .modal-title { font-family: var(--font-head); font-size: 18px; font-weight: 800; }
+  .modal-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 20px; padding: 0 4px; line-height: 1; transition: color 0.1s; }
+  .modal-close:hover { color: var(--text); }
+  .modal-body { padding: 20px 24px 24px; }
+
+  /* ─── FORM ─── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 11px; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; }
+  input[type="text"], input[type="email"], input[type="date"], select, textarea {
+    width: 100%;
+  }
+  textarea { resize: vertical; min-height: 80px; }
+  .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+  /* ─── DETAIL MODAL ─── */
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .detail-field { display: flex; flex-direction: column; gap: 4px; }
+  .detail-label { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+  .detail-value { font-size: 13px; font-family: var(--font-head); font-weight: 600; }
+  .detail-description {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px; line-height: 1.7;
+    font-size: 13px; margin-bottom: 16px;
+  }
+  .detail-resolution {
+    background: rgba(71,217,136,0.05); border: 1px solid rgba(71,217,136,0.15);
+    border-radius: 8px; padding: 14px; line-height: 1.7; font-size: 13px;
+    margin-bottom: 16px;
+  }
+  .detail-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .section-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  /* ─── PEOPLE GRID ─── */
+  .people-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+  .person-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px;
+    display: flex; flex-direction: column; gap: 10px;
+    transition: border-color 0.15s;
+  }
+  .person-card:hover { border-color: rgba(232,255,71,0.2); }
+  .person-top { display: flex; align-items: center; gap: 12px; }
+  .avatar-lg {
+    width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-head); font-size: 16px; font-weight: 800;
+    flex-shrink: 0;
+  }
+  .person-name { font-family: var(--font-head); font-size: 15px; font-weight: 700; }
+  .person-username { color: var(--muted); font-size: 11px; }
+  .person-email { color: var(--accent3); font-size: 11px; }
+  .person-actions { display: flex; gap: 6px; }
+
+  /* ─── PROJECTS GRID ─── */
+  .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+  .project-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px;
+    transition: border-color 0.15s; position: relative; overflow: hidden;
+  }
+  .project-card:hover { border-color: rgba(200,71,255,0.3); }
+  .project-card::after {
+    content: '';
+    position: absolute; right: -20px; top: -20px;
+    width: 80px; height: 80px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(200,71,255,0.1), transparent 70%);
+  }
+  .project-id { font-size: 10px; color: var(--muted); margin-bottom: 6px; }
+  .project-name { font-family: var(--font-head); font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+  .project-count { font-size: 11px; color: var(--muted); }
+
+  /* ─── DASHBOARD STATS ─── */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .stat-num { font-family: var(--font-head); font-size: 32px; font-weight: 800; line-height: 1; }
+  .stat-label { font-size: 11px; color: var(--muted); letter-spacing: 0.5px; }
+  .stat-accent { color: var(--accent); }
+  .stat-open { color: var(--open); }
+  .stat-resolved { color: var(--resolved); }
+  .stat-overdue { color: var(--overdue); }
+
+  .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .chart-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .chart-card.chart-full { grid-column: 1 / -1; }
+  .chart-header { font-family: var(--font-head); font-size: 14px; font-weight: 700; letter-spacing: 0.5px; }
+  .chart-wrapper { position: relative; width: 100%; overflow: hidden; }
+  .chart-canvas { width: 100%; height: 320px; display: block; }
+  .chart-legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .legend-row {
+    display: flex; align-items: center; gap: 10px; cursor: pointer;
+    font-size: 12px; color: var(--text); padding: 8px 10px; border-radius: 8px; border: 1px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .legend-row:hover { background: rgba(232,255,71,0.08); border-color: rgba(232,255,71,0.16); }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+
+  /* ─── EMPTY STATE ─── */
+  .empty { text-align: center; padding: 48px 24px; color: var(--muted); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-family: var(--font-head); font-size: 16px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+
+  /* ─── TOAST ─── */
+  #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9000; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 16px;
+    font-size: 12px; min-width: 220px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    animation: slideLeft 0.2s ease;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .toast.success { border-color: rgba(71,217,136,0.4); }
+  .toast.error { border-color: rgba(255,71,87,0.4); }
+  @keyframes slideLeft { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo">
+    <div class="logo-bug">🐛</div>
+    BugVault
+  </div>
+  <nav>
+    <button onclick="showView('dashboard')" id="nav-dashboard" class="active">Dashboard</button>
+    <button onclick="showView('board')" id="nav-board">Board</button>
+    <button onclick="showView('list')" id="nav-list">All Issues</button>
+    <button onclick="showView('people')" id="nav-people">People</button>
+    <button onclick="showView('projects')" id="nav-projects">Projects</button>
+  </nav>
+  <div class="topbar-right">
+    <button class="btn btn-primary" onclick="openIssueModal()">+ New Issue</button>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<!-- DASHBOARD-->
+<div class="view active" id="view-dashboard">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Dashboard</div>
+      <div class="page-sub">Project health at a glance</div>
+    </div>
+  </div>
+  <div class="stats-row" id="stats-row"></div>
+  <div class="dashboard-grid">
+    <div class="chart-card">
+      <div class="chart-header">Status Distribution</div>
+      <div class="chart-wrapper">
+        <canvas id="chart-status" class="chart-canvas"></canvas>
+      </div>
+      <div class="chart-legend" id="legend-status"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">Priority Breakdown</div>
+      <div class="chart-wrapper">
+        <canvas id="chart-priority" class="chart-canvas"></canvas>
+      </div>
+      <div class="chart-legend" id="legend-priority"></div>
+    </div>
+    <div class="chart-card chart-full">
+      <div class="chart-header">Issues Created Over Time</div>
+      <div class="chart-wrapper">
+        <canvas id="chart-trend" class="chart-canvas"></canvas>
+      </div>
+      <div class="chart-legend" id="legend-trend"></div>
+    </div>
+  </div>
+  <div class="page-header" style="margin-bottom:14px">
+    <div class="page-title" style="font-size:18px">Recent Issues</div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th><th>Summary</th><th>Project</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Due Date</th>
+        </tr>
+      </thead>
+      <tbody id="recent-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- KANBAN BOARD -->
+<div class="view" id="view-board">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Board</div>
+      <div class="page-sub">Kanban view by status</div>
+    </div>
+    <button class="btn btn-primary" onclick="openIssueModal()">+ New Issue</button>
+  </div>
+  <div class="kanban">
+    <div class="kanban-col">
+      <div class="kanban-col-header">
+        <div class="col-label"><div class="col-dot dot-open"></div>Open</div>
+        <div class="col-count" id="count-open">0</div>
+      </div>
+      <div class="kanban-cards" id="col-open"></div>
+    </div>
+    <div class="kanban-col">
+      <div class="kanban-col-header">
+        <div class="col-label"><div class="col-dot dot-overdue"></div>Overdue</div>
+        <div class="col-count" id="count-overdue">0</div>
+      </div>
+      <div class="kanban-cards" id="col-overdue"></div>
+    </div>
+    <div class="kanban-col">
+      <div class="kanban-col-header">
+        <div class="col-label"><div class="col-dot dot-resolved"></div>Resolved</div>
+        <div class="col-count" id="count-resolved">0</div>
+      </div>
+      <div class="kanban-cards" id="col-resolved"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ALL ISSUES LIST  -->
+<div class="view" id="view-list">
+  <div class="page-header">
+    <div>
+      <div class="page-title">All Issues</div>
+      <div class="page-sub" id="issue-count-sub"></div>
+    </div>
+    <button class="btn btn-primary" onclick="openIssueModal()">+ New Issue</button>
+  </div>
+  <div class="filters-bar">
+    <span class="filter-label">Filter:</span>
+    <input type="text" class="search-input" placeholder="Search issues..." id="search-input" oninput="renderList()" />
+    <select id="filter-status" onchange="renderList()">
+      <option value="">All Statuses</option>
+      <option>open</option><option>resolved</option><option>overdue</option>
+    </select>
+    <select id="filter-priority" onchange="renderList()">
+      <option value="">All Priorities</option>
+      <option>low</option><option>medium</option><option>high</option>
+    </select>
+    <select id="filter-project" onchange="renderList()">
+      <option value="">All Projects</option>
+    </select>
+    <select id="filter-assignee" onchange="renderList()">
+      <option value="">All Assignees</option>
+    </select>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th><th>Summary</th><th>Project</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Identified By</th><th>Reported</th><th>Target Date</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="list-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!--  PEOPLE-->
+<div class="view" id="view-people">
+  <div class="page-header">
+    <div>
+      <div class="page-title">People</div>
+      <div class="page-sub">Team members who can be assigned to issues</div>
+    </div>
+    <button class="btn btn-primary" onclick="openPersonModal()">+ Add Person</button>
+  </div>
+  <div class="people-grid" id="people-grid"></div>
+</div>
+
+<!--PROJECTS  -->
+<div class="view" id="view-projects">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Projects</div>
+      <div class="page-sub">Manage your projects</div>
+    </div>
+    <button class="btn btn-primary" onclick="openProjectModal()">+ Add Project</button>
+  </div>
+  <div class="projects-grid" id="projects-grid"></div>
+</div>
+
+
+<!--  MODALS -->
+
+<!-- ISSUE MODAL -->
+<div class="modal-overlay" id="modal-issue">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="issue-modal-title">New Issue</div>
+      <button class="modal-close" onclick="closeModal('modal-issue')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Summary *</label>
+          <input type="text" id="f-summary" placeholder="Brief description of the issue" />
+        </div>
+        <div class="form-group full">
+          <label>Detailed Description</label>
+          <textarea id="f-description" placeholder="Detailed explanation, steps to reproduce, expected vs actual..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Project *</label>
+          <select id="f-project">
+            <option value="">Select project...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Identified By</label>
+          <input type="text" id="f-identified-by" placeholder="Name of reporter" />
+        </div>
+        <div class="form-group">
+          <label>Date Identified</label>
+          <input type="date" id="f-date-identified" />
+        </div>
+        <div class="form-group">
+          <label>Priority</label>
+          <select id="f-priority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="f-status">
+            <option value="open">Open</option>
+            <option value="resolved">Resolved</option>
+            <option value="overdue">Overdue</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Assign To</label>
+          <select id="f-assignee">
+            <option value="">Unassigned</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Target Resolution Date</label>
+          <input type="date" id="f-target-date" />
+        </div>
+        <div class="form-group">
+          <label>Actual Resolution Date</label>
+          <input type="date" id="f-actual-date" />
+        </div>
+        <div class="form-group full">
+          <label>Resolution Summary</label>
+          <textarea id="f-resolution" placeholder="How was this issue resolved?" style="min-height:60px"></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="closeModal('modal-issue')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveIssue()">Save Issue</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PERSON MODAL -->
+<div class="modal-overlay" id="modal-person">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="person-modal-title">Add Person</div>
+      <button class="modal-close" onclick="closeModal('modal-person')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>First Name *</label>
+          <input type="text" id="p-name" placeholder="First name" />
+        </div>
+        <div class="form-group">
+          <label>Surname *</label>
+          <input type="text" id="p-surname" placeholder="Last name" />
+        </div>
+        <div class="form-group">
+          <label>Email *</label>
+          <input type="email" id="p-email" placeholder="email@example.com" />
+        </div>
+        <div class="form-group">
+          <label>Username *</label>
+          <input type="text" id="p-username" placeholder="@username" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="closeModal('modal-person')">Cancel</button>
+        <button class="btn btn-primary" onclick="savePerson()">Save Person</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROJECT MODAL -->
+<div class="modal-overlay" id="modal-project">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Project</div>
+      <button class="modal-close" onclick="closeModal('modal-project')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Project Name *</label>
+          <input type="text" id="proj-name" placeholder="e.g. Mobile App v2" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="closeModal('modal-project')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveProject()">Save Project</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="modal-detail">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header">
+      <div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px" id="detail-id-label"></div>
+        <div class="modal-title" id="detail-title"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-detail')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="ticket-meta" style="margin-bottom:16px" id="detail-badges"></div>
+      <div class="detail-description" id="detail-description"></div>
+      <div class="detail-grid" id="detail-grid"></div>
+      <div id="detail-resolution-wrap" class="hidden">
+        <hr class="section-divider" />
+        <div class="detail-label" style="margin-bottom:8px">Resolution</div>
+        <div class="detail-resolution" id="detail-resolution"></div>
+      </div>
+      <hr class="section-divider" />
+      <div class="detail-actions" id="detail-actions"></div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT CONFIRM DELETE -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title">Delete Issue?</div>
+      <button class="modal-close" onclick="closeModal('modal-confirm')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--muted);line-height:1.6;margin-bottom:20px">This action cannot be undone. The issue will be permanently deleted.</p>
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="closeModal('modal-confirm')">Cancel</button>
+        <button class="btn btn-danger" id="confirm-delete-btn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+
+// DATA LAYER
+
+
+const LS = {
+  get: k => JSON.parse(localStorage.getItem(k) || 'null'),
+  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
+};
+
+let projects = LS.get('bv_projects') || [];
+let people = LS.get('bv_people') || [];
+let issues = LS.get('bv_issues') || [];
+let _editId = null;
+let _editPersonId = null;
+let dashboardRefreshTimer = null;
+let chartHover = {};
+
+function save() {
+  LS.set('bv_projects', projects);
+  LS.set('bv_people', people);
+  LS.set('bv_issues', issues);
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+// ─── SEED DATA ───────────────────────────────────────────
+function seed() {
+  if (LS.get('bv_seeded')) return;
+
+  projects = [
+    { id: 'PRJ-001', name: 'Mobile App v2' },
+    { id: 'PRJ-002', name: 'Web Portal' },
+    { id: 'PRJ-003', name: 'Payment Gateway' },
+    { id: 'PRJ-004', name: 'Admin Dashboard' },
+  ];
+
+  people = [
+    { id: 'USR-001', name: 'Aiko', surname: 'Nakamura', email: 'aiko@example.com', username: 'aiko_n' },
+    { id: 'USR-002', name: 'Tunde', surname: 'Adebayo', email: 'tunde@example.com', username: 'tunde_a' },
+    { id: 'USR-003', name: 'Priya', surname: 'Sharma', email: 'priya@example.com', username: 'priya_s' },
+    { id: 'USR-004', name: 'Luca', surname: 'Ferrari', email: 'luca@example.com', username: 'luca_f' },
+    { id: 'USR-005', name: 'Zanele', surname: 'Dlamini', email: 'zanele@example.com', username: 'zanele_d' },
+  ];
+
+  issues = [
+    { id: 'BUG-001', summary: 'Login button unresponsive on Safari', description: 'Users on Safari 16+ report the login button does not respond to click events. Console shows no errors. Tested on iOS 16 and macOS Ventura.', identifiedBy: 'QA Team', dateIdentified: '2025-01-10', projectId: 'PRJ-002', assigneeId: 'USR-001', status: 'resolved', priority: 'high', targetDate: '2025-01-20', actualDate: '2025-01-18', resolution: 'Fixed event listener binding issue in auth.js — replaced jQuery click with vanilla addEventListener.' },
+    { id: 'BUG-002', summary: 'App crashes on low-memory Android devices', description: 'On Android devices with less than 2GB RAM the app crashes when navigating to the gallery screen. Memory leak suspected in the image cache module.', identifiedBy: 'Tunde Adebayo', dateIdentified: '2025-01-15', projectId: 'PRJ-001', assigneeId: 'USR-002', status: 'open', priority: 'high', targetDate: '2025-02-01', actualDate: '', resolution: '' },
+    { id: 'BUG-003', summary: 'Payment fails for international cards', description: 'Cards issued outside South Africa and Nigeria are declined at checkout. Error code 402 returned by gateway. Stripe dashboard shows no failure, suggesting the issue is on our side.', identifiedBy: 'Zanele Dlamini', dateIdentified: '2025-01-08', projectId: 'PRJ-003', assigneeId: 'USR-003', status: 'overdue', priority: 'high', targetDate: '2025-01-15', actualDate: '', resolution: '' },
+    { id: 'BUG-004', summary: 'Dashboard pie chart renders blank', description: 'The analytics pie chart on the admin dashboard shows empty when filtering by date range. All other charts work correctly. Likely a data aggregation issue in the reporting API.', identifiedBy: 'Priya Sharma', dateIdentified: '2025-01-20', projectId: 'PRJ-004', assigneeId: 'USR-004', status: 'open', priority: 'medium', targetDate: '2025-02-05', actualDate: '', resolution: '' },
+    { id: 'BUG-005', summary: 'Profile picture upload fails on large files', description: 'Uploading images larger than 2MB results in a 413 error. The server limit is set to 10MB. Nginx reverse proxy config likely overrides this.', identifiedBy: 'Luca Ferrari', dateIdentified: '2025-01-22', projectId: 'PRJ-002', assigneeId: 'USR-005', status: 'resolved', priority: 'low', targetDate: '2025-01-28', actualDate: '2025-01-25', resolution: 'Updated nginx.conf client_max_body_size to 15M and reloaded. Tested with 8MB file — success.' },
+    { id: 'BUG-006', summary: 'Notifications not sending to Huawei devices', description: 'Firebase push notifications are not being received on Huawei devices. These devices do not support Google Play Services — needs HMS (Huawei Mobile Services) integration.', identifiedBy: 'Aiko Nakamura', dateIdentified: '2025-01-25', projectId: 'PRJ-001', assigneeId: 'USR-001', status: 'open', priority: 'medium', targetDate: '2025-02-15', actualDate: '', resolution: '' },
+    { id: 'BUG-007', summary: 'CSV export truncates long text fields', description: 'When exporting issues to CSV, description fields longer than 255 characters are cut off. The database column allows 2000 chars but the export function hardcodes 255 as max.', identifiedBy: 'QA Team', dateIdentified: '2024-12-18', projectId: 'PRJ-004', assigneeId: 'USR-002', status: 'overdue', priority: 'low', targetDate: '2025-01-05', actualDate: '', resolution: '' },
+    { id: 'BUG-008', summary: 'Duplicate transactions on double-tap', description: 'Fast double-tapping the "Pay Now" button submits two transactions. Button should be disabled after first click until response is received.', identifiedBy: 'Tunde Adebayo', dateIdentified: '2025-01-12', projectId: 'PRJ-003', assigneeId: 'USR-003', status: 'resolved', priority: 'high', targetDate: '2025-01-14', actualDate: '2025-01-13', resolution: 'Added debounce wrapper and disabled state to payment submit handler. Deployed to production.' },
+    { id: 'BUG-009', summary: 'Search results not updating in real-time', description: 'The search bar on the web portal requires a page refresh to show updated results. The debounced API call is correctly firing but the UI state is not re-rendering.', identifiedBy: 'Zanele Dlamini', dateIdentified: '2025-01-28', projectId: 'PRJ-002', assigneeId: '', status: 'open', priority: 'medium', targetDate: '2025-02-10', actualDate: '', resolution: '' },
+    { id: 'BUG-010', summary: 'Dark mode toggle resets on page reload', description: 'User preference for dark mode is stored in sessionStorage instead of localStorage, causing it to reset between sessions. Minor but affects UX quality.', identifiedBy: 'Priya Sharma', dateIdentified: '2025-01-30', projectId: 'PRJ-004', assigneeId: 'USR-004', status: 'open', priority: 'low', targetDate: '2025-02-07', actualDate: '', resolution: '' },
+    { id: 'BUG-011', summary: 'Two-factor auth codes expire too quickly', description: 'TOTP codes are expiring in under 20 seconds on some devices due to clock drift. Server-side tolerance window should be expanded to ±90 seconds.', identifiedBy: 'Luca Ferrari', dateIdentified: '2025-02-01', projectId: 'PRJ-002', assigneeId: 'USR-005', status: 'overdue', priority: 'high', targetDate: '2025-02-03', actualDate: '', resolution: '' },
+    { id: 'BUG-012', summary: 'Offline mode shows stale data indefinitely', description: 'When the app loses connectivity, cached data is displayed correctly. However, once connectivity is restored, the UI does not automatically refresh — users must manually pull-to-refresh.', identifiedBy: 'Aiko Nakamura', dateIdentified: '2025-02-03', projectId: 'PRJ-001', assigneeId: 'USR-002', status: 'open', priority: 'medium', targetDate: '2025-02-20', actualDate: '', resolution: '' },
+  ];
+
+  save();
+  LS.set('bv_seeded', true);
+}
+seed();
+
+
+// NAVIGATION
+
+
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  renderCurrentView(name);
+  if (name === 'dashboard') startDashboardRefresh(); else stopDashboardRefresh();
+}
+
+function renderCurrentView(name) {
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'board') renderBoard();
+  if (name === 'list') { populateFilters(); renderList(); }
+  if (name === 'people') renderPeople();
+  if (name === 'projects') renderProjects();
+}
+
+function startDashboardRefresh() {
+  stopDashboardRefresh();
+  dashboardRefreshTimer = setInterval(() => {
+    if (document.getElementById('view-dashboard').classList.contains('active')) {
+      renderDashboard();
+    }
+  }, 4000);
+}
+
+function stopDashboardRefresh() {
+  if (dashboardRefreshTimer) {
+    clearInterval(dashboardRefreshTimer);
+    dashboardRefreshTimer = null;
+  }
+}
+
+function applyDashboardFilter(type, value) {
+  showView('list');
+  const map = {
+    status: 'filter-status',
+    priority: 'filter-priority',
+    project: 'filter-project',
+    assignee: 'filter-assignee',
+  };
+  if (map[type]) {
+    document.getElementById(map[type]).value = value;
+  }
+  renderList();
+  toast(`Filtered by ${value}`);
+}
+
+function getPieIndex(x, y, cx, cy, radius, segments) {
+  const dx = x - cx;
+  const dy = y - cy;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist > radius) return null;
+  let angle = Math.atan2(dy, dx);
+  if (angle < -Math.PI / 2) angle += Math.PI * 2;
+  if (angle < -Math.PI / 2) angle += Math.PI * 2;
+  return segments.find(seg => angle >= seg.start && angle < seg.end)?.index ?? null;
+}
+
+function drawPieChart(canvasId, dataset, colors, legendId, filterType) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  canvas.width = canvas.offsetWidth;
+  canvas.height = 320;
+  const ctx = canvas.getContext('2d');
+  const width = canvas.width;
+  const height = canvas.height;
+  const cx = width / 2;
+  const cy = height / 2;
+  const radius = Math.min(width, height) / 2 - 36;
+  const total = dataset.reduce((sum, item) => sum + item.value, 0);
+  ctx.clearRect(0, 0, width, height);
+
+  let start = -Math.PI / 2;
+  const segments = dataset.map((item, index) => {
+    const angle = total ? (item.value / total) * Math.PI * 2 : 0;
+    const seg = { index, start, end: start + angle, item };
+    start += angle;
+    return seg;
+  });
+
+  segments.forEach(seg => {
+    const isHover = chartHover[canvasId] === seg.index;
+    const outerRadius = radius + (isHover ? 10 : 0);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, outerRadius, seg.start, seg.end);
+    ctx.closePath();
+    ctx.fillStyle = colors[seg.index];
+    ctx.fill();
+  });
+
+  ctx.strokeStyle = '#111118';
+  ctx.lineWidth = 2;
+  segments.forEach(seg => {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, radius, seg.start, seg.end);
+    ctx.closePath();
+    ctx.stroke();
+  });
+
+  ctx.fillStyle = '#f0f0f5';
+  ctx.font = '700 18px Space Mono';
+  ctx.textAlign = 'center';
+  ctx.fillText(total + ' total', cx, cy + 6);
+
+  const legend = document.getElementById(legendId);
+  if (legend) {
+    legend.innerHTML = dataset.map(item => `
+      <div class="legend-row" onclick="applyDashboardFilter('${filterType}', '${item.valueLabel || item.label.toLowerCase()}')">
+        <span class="legend-swatch" style="background:${colors[dataset.indexOf(item)]}"></span>
+        <span>${item.label}: ${item.value}</span>
+      </div>
+    `).join('');
+  }
+
+  canvas.onmousemove = event => {
+    const rect = canvas.getBoundingClientRect();
+    const idx = getPieIndex(event.clientX - rect.left, event.clientY - rect.top, cx, cy, radius, segments);
+    if (idx !== chartHover[canvasId]) {
+      chartHover[canvasId] = idx;
+      drawPieChart(canvasId, dataset, colors, legendId, filterType);
+    }
+  };
+
+  canvas.onclick = event => {
+    const rect = canvas.getBoundingClientRect();
+    const idx = getPieIndex(event.clientX - rect.left, event.clientY - rect.top, cx, cy, radius, segments);
+    if (idx !== null) {
+      const selected = dataset[idx];
+      applyDashboardFilter(filterType, selected.valueLabel || selected.label.toLowerCase());
+    }
+  };
+}
+
+function renderTrendChart() {
+  const canvas = document.getElementById('chart-trend');
+  if (!canvas) return;
+  canvas.width = canvas.offsetWidth;
+  canvas.height = 320;
+  const ctx = canvas.getContext('2d');
+  const width = canvas.width;
+  const height = canvas.height;
+  const padding = 48;
+  const chartWidth = width - padding * 1.5;
+  const chartHeight = height - padding * 1.6;
+
+  const buckets = {};
+  issues.forEach(issue => {
+    const date = issue.dateIdentified ? new Date(issue.dateIdentified) : new Date();
+    const key = date.toLocaleDateString('en-ZA', { month: 'short', year: 'numeric' });
+    buckets[key] = (buckets[key] || 0) + 1;
+  });
+
+  const labels = Object.keys(buckets).sort((a, b) => new Date(a) - new Date(b));
+  const values = labels.map(label => buckets[label]);
+  const max = Math.max(...values, 1);
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = padding + (chartHeight / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(padding, y);
+    ctx.lineTo(padding + chartWidth, y);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = 'rgba(232,255,71,0.28)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  values.forEach((value, index) => {
+    const x = padding + (chartWidth / Math.max(1, labels.length - 1)) * index;
+    const y = padding + chartHeight - (value / max) * chartHeight;
+    if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  ctx.fillStyle = '#47c8ff';
+  values.forEach((value, index) => {
+    const x = padding + (chartWidth / Math.max(1, labels.length - 1)) * index;
+    const y = padding + chartHeight - (value / max) * chartHeight;
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f0f0f5';
+    ctx.font = '700 11px Space Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(value, x, y - 10);
+    ctx.fillStyle = '#47c8ff';
+  });
+
+  ctx.fillStyle = 'rgba(240,240,245,0.72)';
+  ctx.font = '11px Space Mono';
+  ctx.textAlign = 'center';
+  labels.forEach((label, index) => {
+    const x = padding + (chartWidth / Math.max(1, labels.length - 1)) * index;
+    ctx.fillText(label, x, height - 14);
+  });
+
+  const legend = document.getElementById('legend-trend');
+  if (legend) {
+    legend.innerHTML = `<div class="legend-row" style="cursor:default"><span class="legend-swatch" style="background:rgba(71,200,255,0.85)"></span>Showing ${values.reduce((sum, v) => sum + v, 0)} issues</div>`;
+  }
+}
+
+function renderDashboard() {
+  const open = issues.filter(i => i.status === 'open').length;
+  const resolved = issues.filter(i => i.status === 'resolved').length;
+  const overdue = issues.filter(i => i.status === 'overdue').length;
+  const high = issues.filter(i => i.priority === 'high').length;
+
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card"><div class="stat-num stat-accent">${issues.length}</div><div class="stat-label">Total Issues</div></div>
+    <div class="stat-card"><div class="stat-num stat-open">${open}</div><div class="stat-label">Open</div></div>
+    <div class="stat-card"><div class="stat-num stat-overdue">${overdue}</div><div class="stat-label">Overdue</div></div>
+    <div class="stat-card"><div class="stat-num stat-resolved">${resolved}</div><div class="stat-label">Resolved</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--high)">${high}</div><div class="stat-label">High Priority</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--accent4)">${projects.length}</div><div class="stat-label">Projects</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--accent3)">${people.length}</div><div class="stat-label">Team Members</div></div>
+  `;
+
+  drawPieChart('chart-status', [
+    { label: 'Open', value: open },
+    { label: 'Overdue', value: overdue },
+    { label: 'Resolved', value: resolved }
+  ], ['#e8a847', '#ff4757', '#47d988'], 'legend-status', 'status');
+
+  drawPieChart('chart-priority', [
+    { label: 'Low', value: issues.filter(i => i.priority === 'low').length, valueLabel: 'low' },
+    { label: 'Medium', value: issues.filter(i => i.priority === 'medium').length, valueLabel: 'medium' },
+    { label: 'High', value: high, valueLabel: 'high' }
+  ], ['#47c8ff', '#e8a847', '#ff4757'], 'legend-priority', 'priority');
+
+  renderTrendChart();
+
+  const recent = [...issues].sort((a, b) => b.dateIdentified.localeCompare(a.dateIdentified)).slice(0, 8);
+  document.getElementById('recent-tbody').innerHTML = recent.map(i => issueRow(i, true)).join('');
+}
+
+
+// HELPERS
+
+function getPerson(id) { return people.find(p => p.id === id); }
+function getProject(id) { return projects.find(p => p.id === id); }
+
+function avatarColors() {
+  return ['#e8ff47','#ff4757','#47c8ff','#c847ff','#47d988','#e8a847','#ff8c47'];
+}
+function avatarColor(id) {
+  const colors = avatarColors();
+  let h = 0;
+  for (let c of (id||'x')) h = c.charCodeAt(0) + h * 31;
+  return colors[Math.abs(h) % colors.length];
+}
+function personInitials(p) {
+  if (!p) return '?';
+  return (p.name[0] + p.surname[0]).toUpperCase();
+}
+
+function priorityBadge(p) {
+  return `<span class="badge badge-${p}">${p}</span>`;
+}
+function statusBadge(s) {
+  return `<span class="badge badge-${s}">${s}</span>`;
+}
+
+function fmt(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-ZA', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${type === 'success' ? '✓' : '✕'}</span> ${msg}`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// DASHBOARD
+
+
+function renderDashboard() {
+  const open = issues.filter(i => i.status === 'open').length;
+  const resolved = issues.filter(i => i.status === 'resolved').length;
+  const overdue = issues.filter(i => i.status === 'overdue').length;
+  const high = issues.filter(i => i.priority === 'high').length;
+
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card"><div class="stat-num stat-accent">${issues.length}</div><div class="stat-label">Total Issues</div></div>
+    <div class="stat-card"><div class="stat-num stat-open">${open}</div><div class="stat-label">Open</div></div>
+    <div class="stat-card"><div class="stat-num stat-overdue">${overdue}</div><div class="stat-label">Overdue</div></div>
+    <div class="stat-card"><div class="stat-num stat-resolved">${resolved}</div><div class="stat-label">Resolved</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--high)">${high}</div><div class="stat-label">High Priority</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--accent4)">${projects.length}</div><div class="stat-label">Projects</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--accent3)">${people.length}</div><div class="stat-label">Team Members</div></div>
+  `;
+
+  setTimeout(() => {
+    drawPieChart('chart-status', [
+      { label: 'Open', value: open },
+      { label: 'Overdue', value: overdue },
+      { label: 'Resolved', value: resolved }
+    ], ['#e8a847', '#ff4757', '#47d988'], 'legend-status', 'status');
+
+    drawPieChart('chart-priority', [
+      { label: 'Low', value: issues.filter(i => i.priority === 'low').length, valueLabel: 'low' },
+      { label: 'Medium', value: issues.filter(i => i.priority === 'medium').length, valueLabel: 'medium' },
+      { label: 'High', value: high, valueLabel: 'high' }
+    ], ['#47c8ff', '#e8a847', '#ff4757'], 'legend-priority', 'priority');
+
+    renderTrendChart();
+  }, 100);
+
+  const recent = [...issues].sort((a,b) => b.dateIdentified > a.dateIdentified ? 1 : -1).slice(0, 8);
+  document.getElementById('recent-tbody').innerHTML = recent.map(i => issueRow(i, true)).join('');
+}
+
+
+// BOARD
+
+
+function renderBoard() {
+  ['open','resolved','overdue'].forEach(status => {
+    const cards = issues.filter(i => i.status === status);
+    document.getElementById('count-' + status).textContent = cards.length;
+    document.getElementById('col-' + status).innerHTML =
+      cards.length ? cards.map(i => ticketCard(i)).join('') :
+      '<div style="text-align:center;padding:20px;color:var(--muted);font-size:11px">No issues</div>';
+  });
+}
+
+function ticketCard(issue) {
+  const person = getPerson(issue.assigneeId);
+  const proj = getProject(issue.projectId);
+  return `
+    <div class="ticket-card priority-${issue.priority}" onclick="openDetail('${issue.id}')">
+      <div class="ticket-id">⬡ ${issue.id}</div>
+      <div class="ticket-summary">${issue.summary}</div>
+      <div class="ticket-meta">
+        ${priorityBadge(issue.priority)}
+        ${proj ? `<span class="badge badge-project">${proj.name}</span>` : ''}
+        <div class="ticket-assignee">
+          ${person ? `<div class="avatar" style="background:${avatarColor(person.id)};color:#0a0a0f">${personInitials(person)}</div><span>${person.name}</span>` : '<span>Unassigned</span>'}
+        </div>
+      </div>
+    </div>`;
+}
+
+
+// LIST VIEW
+
+
+function populateFilters() {
+  const fp = document.getElementById('filter-project');
+  const fa = document.getElementById('filter-assignee');
+  fp.innerHTML = '<option value="">All Projects</option>' +
+    projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  fa.innerHTML = '<option value="">All Assignees</option>' +
+    people.map(p => `<option value="${p.id}">${p.name} ${p.surname}</option>`).join('');
+}
+
+function renderList() {
+  const q = (document.getElementById('search-input').value || '').toLowerCase();
+  const st = document.getElementById('filter-status').value;
+  const pr = document.getElementById('filter-priority').value;
+  const pj = document.getElementById('filter-project').value;
+  const as = document.getElementById('filter-assignee').value;
+
+  let filtered = issues.filter(i => {
+    if (q && !i.summary.toLowerCase().includes(q) && !i.id.toLowerCase().includes(q)) return false;
+    if (st && i.status !== st) return false;
+    if (pr && i.priority !== pr) return false;
+    if (pj && i.projectId !== pj) return false;
+    if (as && i.assigneeId !== as) return false;
+    return true;
+  });
+
+  document.getElementById('issue-count-sub').textContent = `${filtered.length} of ${issues.length} issues`;
+  document.getElementById('list-tbody').innerHTML = filtered.length
+    ? filtered.map(i => issueRow(i)).join('')
+    : `<tr><td colspan="10"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No issues found</div><div>Try adjusting your filters</div></div></td></tr>`;
+}
+
+function issueRow(i, short) {
+  const person = getPerson(i.assigneeId);
+  const proj = getProject(i.projectId);
+  const shortCols = short ? '' : `
+    <td>${i.identifiedBy || '—'}</td>
+    <td>${fmt(i.dateIdentified)}</td>
+    <td>${fmt(i.targetDate)}</td>
+    <td>
+      <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openIssueModal('${i.id}')">Edit</button>
+      <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();confirmDelete('${i.id}')">Del</button>
+    </td>`;
+  return `
+    <tr onclick="openDetail('${i.id}')">
+      <td class="td-id">${i.id}</td>
+      <td class="td-summary">${i.summary}</td>
+      <td>${proj ? `<span class="badge badge-project">${proj.name}</span>` : '—'}</td>
+      <td>${priorityBadge(i.priority)}</td>
+      <td>${statusBadge(i.status)}</td>
+      <td>
+        ${person
+          ? `<div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="background:${avatarColor(person.id)};color:#0a0a0f">${personInitials(person)}</div>${person.name}</div>`
+          : '<span style="color:var(--muted)">Unassigned</span>'}
+      </td>
+      ${shortCols}
+    </tr>`;
+}
+
+
+// DETAIL MODAL
+
+
+function openDetail(id) {
+  const i = issues.find(x => x.id === id);
+  if (!i) return;
+  const person = getPerson(i.assigneeId);
+  const proj = getProject(i.projectId);
+
+  document.getElementById('detail-id-label').textContent = i.id;
+  document.getElementById('detail-title').textContent = i.summary;
+  document.getElementById('detail-badges').innerHTML =
+    priorityBadge(i.priority) + ' ' + statusBadge(i.status) +
+    (proj ? ` <span class="badge badge-project">${proj.name}</span>` : '');
+  document.getElementById('detail-description').textContent = i.description || 'No description provided.';
+
+  document.getElementById('detail-grid').innerHTML = `
+    <div class="detail-field"><div class="detail-label">Identified By</div><div class="detail-value">${i.identifiedBy || '—'}</div></div>
+    <div class="detail-field"><div class="detail-label">Date Identified</div><div class="detail-value">${fmt(i.dateIdentified)}</div></div>
+    <div class="detail-field"><div class="detail-label">Assigned To</div><div class="detail-value" style="display:flex;align-items:center;gap:8px">
+      ${person
+        ? `<div class="avatar" style="background:${avatarColor(person.id)};color:#0a0a0f">${personInitials(person)}</div>${person.name} ${person.surname}`
+        : 'Unassigned'}
+    </div></div>
+    <div class="detail-field"><div class="detail-label">Project</div><div class="detail-value">${proj ? proj.name : '—'}</div></div>
+    <div class="detail-field"><div class="detail-label">Target Date</div><div class="detail-value">${fmt(i.targetDate)}</div></div>
+    <div class="detail-field"><div class="detail-label">Actual Resolution</div><div class="detail-value">${fmt(i.actualDate)}</div></div>
+  `;
+
+  const resWrap = document.getElementById('detail-resolution-wrap');
+  if (i.resolution) {
+    resWrap.classList.remove('hidden');
+    document.getElementById('detail-resolution').textContent = i.resolution;
+  } else {
+    resWrap.classList.add('hidden');
+  }
+
+  document.getElementById('detail-actions').innerHTML = `
+    <button class="btn btn-primary btn-sm" onclick="closeModal('modal-detail');openIssueModal('${id}')">Edit Issue</button>
+    <button class="btn btn-danger btn-sm" onclick="closeModal('modal-detail');confirmDelete('${id}')">Delete</button>
+    <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-detail')">Close</button>
+  `;
+
+  openModal('modal-detail');
+}
+
+
+// ISSUE MODAL (Create / Edit)
+
+
+function openIssueModal(editId) {
+  _editId = editId || null;
+  document.getElementById('issue-modal-title').textContent = editId ? 'Edit Issue' : 'New Issue';
+
+  // Populate dropdowns
+  document.getElementById('f-project').innerHTML = '<option value="">Select project...</option>' +
+    projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  document.getElementById('f-assignee').innerHTML = '<option value="">Unassigned</option>' +
+    people.map(p => `<option value="${p.id}">${p.name} ${p.surname}</option>`).join('');
+
+  if (editId) {
+    const i = issues.find(x => x.id === editId);
+    if (!i) return;
+    document.getElementById('f-summary').value = i.summary;
+    document.getElementById('f-description').value = i.description;
+    document.getElementById('f-project').value = i.projectId;
+    document.getElementById('f-identified-by').value = i.identifiedBy;
+    document.getElementById('f-date-identified').value = i.dateIdentified;
+    document.getElementById('f-priority').value = i.priority;
+    document.getElementById('f-status').value = i.status;
+    document.getElementById('f-assignee').value = i.assigneeId;
+    document.getElementById('f-target-date').value = i.targetDate;
+    document.getElementById('f-actual-date').value = i.actualDate;
+    document.getElementById('f-resolution').value = i.resolution;
+  } else {
+    ['f-summary','f-description','f-identified-by','f-resolution'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-project').value = '';
+    document.getElementById('f-assignee').value = '';
+    document.getElementById('f-priority').value = 'medium';
+    document.getElementById('f-status').value = 'open';
+    const today = new Date().toISOString().slice(0,10);
+    document.getElementById('f-date-identified').value = today;
+    document.getElementById('f-target-date').value = '';
+    document.getElementById('f-actual-date').value = '';
+  }
+  openModal('modal-issue');
+}
+
+function saveIssue() {
+  const summary = document.getElementById('f-summary').value.trim();
+  if (!summary) { toast('Summary is required', 'error'); return; }
+
+  const data = {
+    summary,
+    description: document.getElementById('f-description').value.trim(),
+    projectId: document.getElementById('f-project').value,
+    identifiedBy: document.getElementById('f-identified-by').value.trim(),
+    dateIdentified: document.getElementById('f-date-identified').value,
+    priority: document.getElementById('f-priority').value,
+    status: document.getElementById('f-status').value,
+    assigneeId: document.getElementById('f-assignee').value,
+    targetDate: document.getElementById('f-target-date').value,
+    actualDate: document.getElementById('f-actual-date').value,
+    resolution: document.getElementById('f-resolution').value.trim(),
+  };
+
+  if (_editId) {
+    const idx = issues.findIndex(i => i.id === _editId);
+    issues[idx] = { ...issues[idx], ...data };
+    toast('Issue updated');
+  } else {
+    const nextNum = issues.length + 1;
+    data.id = 'BUG-' + String(nextNum).padStart(3, '0');
+    issues.push(data);
+    toast('Issue created');
+  }
+
+  save();
+  closeModal('modal-issue');
+  refreshCurrentView();
+}
+
+
+// DELETE
+
+
+function confirmDelete(id) {
+  document.getElementById('confirm-delete-btn').onclick = () => {
+    issues = issues.filter(i => i.id !== id);
+    save();
+    closeModal('modal-confirm');
+    toast('Issue deleted');
+    refreshCurrentView();
+  };
+  openModal('modal-confirm');
+}
+
+
+// PEOPLE
+
+
+function renderPeople() {
+  document.getElementById('people-grid').innerHTML = people.length ? people.map(personCard).join('') :
+    `<div class="empty"><div class="empty-icon">👥</div><div class="empty-text">No people yet</div><div>Add team members to assign issues</div></div>`;
+}
+
+function personCard(p) {
+  const col = avatarColor(p.id);
+  return `
+    <div class="person-card">
+      <div class="person-top">
+        <div class="avatar-lg" style="background:${col};color:#0a0a0f">${personInitials(p)}</div>
+        <div>
+          <div class="person-name">${p.name} ${p.surname}</div>
+          <div class="person-username">@${p.username}</div>
+          <div class="person-email">${p.email}</div>
+        </div>
+      </div>
+      <div class="person-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openPersonModal('${p.id}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePerson('${p.id}')">Remove</button>
+      </div>
+    </div>`;
+}
+
+function openPersonModal(editId) {
+  _editPersonId = editId || null;
+  document.getElementById('person-modal-title').textContent = editId ? 'Edit Person' : 'Add Person';
+  if (editId) {
+    const p = people.find(x => x.id === editId);
+    if (!p) return;
+    document.getElementById('p-name').value = p.name;
+    document.getElementById('p-surname').value = p.surname;
+    document.getElementById('p-email').value = p.email;
+    document.getElementById('p-username').value = p.username;
+  } else {
+    ['p-name','p-surname','p-email','p-username'].forEach(id => document.getElementById(id).value = '');
+  }
+  openModal('modal-person');
+}
+
+function savePerson() {
+  const name = document.getElementById('p-name').value.trim();
+  const surname = document.getElementById('p-surname').value.trim();
+  const email = document.getElementById('p-email').value.trim();
+  const username = document.getElementById('p-username').value.trim().replace('@','');
+
+  if (!name || !surname || !email || !username) { toast('All fields required', 'error'); return; }
+
+  // unique username check
+  const dupUsername = people.find(p => p.username === username && p.id !== _editPersonId);
+  if (dupUsername) { toast('Username already taken', 'error'); return; }
+
+  if (_editPersonId) {
+    const idx = people.findIndex(p => p.id === _editPersonId);
+    people[idx] = { ...people[idx], name, surname, email, username };
+    toast('Person updated');
+  } else {
+    people.push({ id: 'USR-' + String(people.length + 1).padStart(3,'0'), name, surname, email, username });
+    toast('Person added');
+  }
+  save();
+  closeModal('modal-person');
+  renderPeople();
+}
+
+function deletePerson(id) {
+  people = people.filter(p => p.id !== id);
+  issues.forEach(i => { if (i.assigneeId === id) i.assigneeId = ''; });
+  save();
+  renderPeople();
+  toast('Person removed');
+}
+
+
+// PROJECTS
+
+function renderProjects() {
+  document.getElementById('projects-grid').innerHTML = projects.length ? projects.map(projectCard).join('') :
+    `<div class="empty"><div class="empty-icon">📁</div><div class="empty-text">No projects yet</div></div>`;
+}
+
+function projectCard(p) {
+  const count = issues.filter(i => i.projectId === p.id).length;
+  return `
+    <div class="project-card">
+      <div class="project-id">${p.id}</div>
+      <div class="project-name">${p.name}</div>
+      <div class="project-count">${count} issue${count !== 1 ? 's' : ''}</div>
+      <div style="margin-top:10px;display:flex;gap:6px">
+        <button class="btn btn-danger btn-sm" onclick="deleteProject('${p.id}')">Delete</button>
+      </div>
+    </div>`;
+}
+
+function openProjectModal() { openModal('modal-project'); document.getElementById('proj-name').value = ''; }
+
+function saveProject() {
+  const name = document.getElementById('proj-name').value.trim();
+  if (!name) { toast('Project name required', 'error'); return; }
+  const id = 'PRJ-' + String(projects.length + 1).padStart(3, '0');
+  projects.push({ id, name });
+  save();
+  closeModal('modal-project');
+  renderProjects();
+  toast('Project created');
+}
+
+function deleteProject(id) {
+  projects = projects.filter(p => p.id !== id);
+  save();
+  renderProjects();
+  toast('Project removed');
+}
+
+
+// MODAL HELPERS
+
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// Close on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+function refreshCurrentView() {
+  const active = document.querySelector('.view.active');
+  if (!active) return;
+  const name = active.id.replace('view-', '');
+  renderCurrentView(name);
+}
+
+// INIT 
+renderDashboard();
+</script>
+</body>
+</html>
