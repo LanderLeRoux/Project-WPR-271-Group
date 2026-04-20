@@ -11,6 +11,10 @@ function - deleteIssue
 function - updateIssueStatus
 function - renderIssuesList
 function - init
+function - updateDropdowns
+function - handlePersonFormSubmit
+function - handleProjectFormSubit
+function - handleIssueFormSubmit
 
 people
 str - name
