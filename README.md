@@ -113,14 +113,6 @@ Screenshots of the system functionality are stored in the `evidence` folder. The
 - Kitso Knowledge Matlaila – Issue Viewing and Dashboard
 - Moleboheng Rebecca Lehola – Documentation, Demo, and Integration
 
-## Contribution 
-Member 4 focused on:
-- Improving and completing project documentation
-- Preparing realistic test data (10+ issues)
-- Ensuring full system integration
-- Collecting evidence through screenshots
-- Preparing the demonstration flow for presentation
-=======
 ## Contribution
 
 - Lander Le Roux
