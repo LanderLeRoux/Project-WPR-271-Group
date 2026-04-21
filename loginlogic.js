@@ -5,7 +5,7 @@ function checkpassword() {
 
     if (username.value === "admin" && password.value === "1234") {
         console.log("Welcome in Admin");
-        localStorage.setItem('loggedIn', 'true');
+        sessionStorage.setItem('loggedIn', 'true');
         window.location.href = "index.html";
     } else {
         console.log("Wrong Password");
