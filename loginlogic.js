@@ -1,15 +1,15 @@
 
 function checkpassword() {
-    const email = document.getElementById('email');
+    const username = document.getElementById('usernameform');
     const password = document.getElementById('password');
 
-    if (email.value === "admin@email.com" && password.value === "password") {
+    if (username.value === "admin" && password.value === "1234") {
         console.log("Welcome in Admin");
         localStorage.setItem('loggedIn', 'true');
         window.location.href = "index.html";
     } else {
         console.log("Wrong Password");
-        alert("Wrong Email or Password");
+        alert("Wrong Username or Password");
     }
 }
 
