@@ -108,14 +108,14 @@ Screenshots of the system functionality are stored in the `evidence` folder. The
 - localStorage usage
 
 ## Group Roles
-- Lander Le Roux – Issue (Ticket) Management
-- Chisomo Jamal Chirwa – People and Project Management
+- Chisomo Jamal Chirwa – Issue (Ticket) Management
+- Lander Le Roux – People and Project Management
 - Kitso Knowledge Matlaila – Issue Viewing and Dashboard
 - Moleboheng Rebecca Lehola – Documentation, Demo, and Integration
 
 ## Contribution
 
-- Lander Le Roux
+- Chisomo Jamal Chirwa
   - Created and managed issues (tickets)
   - Implemented issue assignment and reassignment
   - Developed edit and update functionality for issues
@@ -123,7 +123,7 @@ Screenshots of the system functionality are stored in the `evidence` folder. The
   - Applied priority logic (low, medium, high)
   - Ensured issue data persists using localStorage
 
-- Chisomo Jamal Chirwa
+- Lander Le Roux
   - Created and managed people (users)
   - Created and managed projects
   - Linked people and projects to issues
