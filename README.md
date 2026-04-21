@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+HEAD
 A bug‑tracking program designed to document software issues, assign priority or severity levels, and specify the project in which each bug occurs.
 We created a multi functioning program capable of storing multiple users and their data. While being able to edit the users data in realtime with the program.
 
@@ -113,8 +113,8 @@ Screenshots of the system functionality are stored in the `evidence` folder. The
 - Member 3: Issue Viewing and Dashboard
 - Member 4: Documentation, Demo, and Integration
 
-## Contribution (Part 4)
-Part 4 focused on:
+## Contribution 
+Member 4 focused on:
 - Improving and completing project documentation
 - Preparing realistic test data (10+ issues)
 - Ensuring full system integration
@@ -122,5 +122,4 @@ Part 4 focused on:
 - Preparing the demonstration flow for presentation
 
 ## Conclusion
-The Bug Tracking System successfully meets the requirements of the assignment by allowing users to manage issues efficiently. The integration of all components and the use of localStorage ensures that the system is functional, user-friendly, and persistent across sessions.
->>>>>>> 4fdc851 (Documentation, demo script and evidence added)
+The Bug Tracking System successfully meets the requirements of the assignment by allowing users to manage issues efficiently. The integration of all components and the use of localStorage ensures that the system is functional, user-friendly, and persistent across sessions. (Documentation, demo script and evidence added)
