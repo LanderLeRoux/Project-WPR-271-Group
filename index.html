@@ -385,6 +385,7 @@
     <button onclick="showView('projects')" id="nav-projects">Projects</button>
   </nav>
   <div class="topbar-right">
+    <button class="btn btn-ghost" onclick="logout()">Logout</button>
     <button class="btn btn-primary" onclick="openIssueModal()">+ New Issue</button>
   </div>
 </div>
@@ -410,7 +411,7 @@
       <div class="chart-legend" id="legend-status"></div>
     </div>
     <div class="chart-card">
-      <div class="chart-header">Priority Breakdown 1 !!</div>
+      <div class="chart-header">Priority Breakdown </div>
       <div class="chart-wrapper">
         <canvas id="chart-priority" class="chart-canvas"></canvas>
       </div>
@@ -711,8 +712,19 @@
   </div>
 </div>
 
-
+//
 <script>
+
+// Check if user is logged in
+if (!localStorage.getItem('isLoggedIn')) {
+    window.location.href = 'login.html';
+}
+
+function logout() {
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userEmail');
+    window.location.href = 'login.html';
+}
 
 // DATA LAYER
 
