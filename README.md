@@ -108,10 +108,10 @@ Screenshots of the system functionality are stored in the `evidence` folder. The
 - localStorage usage
 
 ## Group Roles
-- Member 1: Issue (Ticket) Management
-- Member 2: People and Project Management
-- Member 3: Issue Viewing and Dashboard
-- Member 4: Documentation, Demo, and Integration
+- Lander Le Roux – Issue (Ticket) Management
+- Chisomo Jamal Chirwa – People and Project Management
+- Kitso Knowledge Matlaila – Issue Viewing and Dashboard
+- Moleboheng Rebecca Lehola – Documentation, Demo, and Integration
 
 ## Contribution 
 Member 4 focused on:
@@ -120,6 +120,39 @@ Member 4 focused on:
 - Ensuring full system integration
 - Collecting evidence through screenshots
 - Preparing the demonstration flow for presentation
+=======
+## Contribution
+
+- Lander Le Roux
+  - Created and managed issues (tickets)
+  - Implemented issue assignment and reassignment
+  - Developed edit and update functionality for issues
+  - Applied status logic (open, resolved, overdue)
+  - Applied priority logic (low, medium, high)
+  - Ensured issue data persists using localStorage
+
+- Chisomo Jamal Chirwa
+  - Created and managed people (users)
+  - Created and managed projects
+  - Linked people and projects to issues
+  - Ensured dropdowns populate correctly in issue forms
+  - Implemented saving and retrieving data from localStorage
+
+- Kitso Knowledge Matlaila
+  - Designed and developed the dashboard interface
+  - Implemented “View All Issues” functionality
+  - Implemented “View Single Issue” functionality
+  - Ensured clean layout and user-friendly interface
+  - Applied Bootstrap styling and UI improvements
+
+- Moleboheng Rebecca Lehola
+  - Updated and improved README documentation
+  - Created and structured the demo script
+  - Collected and organised evidence screenshots
+  - Tested full system workflow (create, assign, edit, persist)
+  - Managed GitHub integration (push, pull, resolving conflicts)
+  - Prepared project for final submission and presentation
+>>>(Formatted contributions per member)
 
 ## Conclusion
 The Bug Tracking System successfully meets the requirements of the assignment by allowing users to manage issues efficiently. The integration of all components and the use of localStorage ensures that the system is functional, user-friendly, and persistent across sessions. (Documentation, demo script and evidence added)
