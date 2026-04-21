@@ -713,10 +713,9 @@
 </div>
 
 //
-<script>
-
+<script defer>
 // Check if user is logged in with space for log-out function
-if (!localStorage.getItem('isLoggedIn')) {
+function logout() {
     window.location.href = 'login.html';
 }
 
