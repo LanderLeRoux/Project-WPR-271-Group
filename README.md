@@ -144,7 +144,6 @@ Screenshots of the system functionality are stored in the `evidence` folder. The
   - Tested full system workflow (create, assign, edit, persist)
   - Managed GitHub integration (push, pull, resolving conflicts)
   - Prepared project for final submission and presentation
->>>(Formatted contributions per member)
 
 ## Conclusion
 The Bug Tracking System successfully meets the requirements of the assignment by allowing users to manage issues efficiently. The integration of all components and the use of localStorage ensures that the system is functional, user-friendly, and persistent across sessions. (Documentation, demo script and evidence added)
